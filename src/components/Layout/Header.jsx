@@ -5,7 +5,7 @@ import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
-const { FiLink2, FiUser, FiSettings, FiLogOut, FiMenu, FiX } = FiIcons;
+const { FiLink2, FiUser, FiSettings, FiLogOut, FiMenu, FiX, FiShield } = FiIcons;
 
 const Header = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -28,7 +28,7 @@ const Header = () => {
   };
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50"
@@ -53,7 +53,7 @@ const Header = () => {
                   </Link>
                 )}
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={toggleDropdown}
                     className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
                   >
@@ -62,23 +62,31 @@ const Header = () => {
                   </button>
                   {isDropdownOpen && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                      <Link 
-                        to="/profile" 
+                      <Link
+                        to="/profile"
                         onClick={closeDropdown}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <SafeIcon icon={FiUser} className="inline h-4 w-4 mr-2" />
                         Profile
                       </Link>
-                      <Link 
-                        to="/settings" 
+                      <Link
+                        to="/settings"
                         onClick={closeDropdown}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <SafeIcon icon={FiSettings} className="inline h-4 w-4 mr-2" />
                         Settings
                       </Link>
-                      <button 
+                      <Link
+                        to="/security"
+                        onClick={closeDropdown}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <SafeIcon icon={FiShield} className="inline h-4 w-4 mr-2" />
+                        Security & 2FA
+                      </Link>
+                      <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
@@ -92,27 +100,24 @@ const Header = () => {
             ) : (
               <>
                 <Link to="/login" className="text-gray-700 hover:text-primary-600 transition-colors">
-                  Login
+                  Sign In
                 </Link>
                 <Link to="/register" className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors">
-                  Sign Up
+                  Create Account
                 </Link>
               </>
             )}
           </nav>
 
           {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
+          <button className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             <SafeIcon icon={isMobileMenuOpen ? FiX : FiMenu} className="h-6 w-6 text-gray-700" />
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -120,37 +125,44 @@ const Header = () => {
           >
             {user ? (
               <>
-                <Link 
-                  to="/dashboard" 
+                <Link
+                  to="/dashboard"
                   className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 {isAdmin && (
-                  <Link 
-                    to="/admin" 
+                  <Link
+                    to="/admin"
                     className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Admin
                   </Link>
                 )}
-                <Link 
-                  to="/profile" 
+                <Link
+                  to="/profile"
                   className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Profile
                 </Link>
-                <Link 
-                  to="/settings" 
+                <Link
+                  to="/settings"
                   className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Settings
                 </Link>
-                <button 
+                <Link
+                  to="/security"
+                  className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Security & 2FA
+                </Link>
+                <button
                   onClick={handleLogout}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                 >
@@ -159,19 +171,19 @@ const Header = () => {
               </>
             ) : (
               <>
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="block px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Login
+                  Sign In
                 </Link>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="block px-4 py-2 text-primary-600 hover:text-primary-700 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Sign Up
+                  Create Account
                 </Link>
               </>
             )}

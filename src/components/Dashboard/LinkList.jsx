@@ -5,16 +5,28 @@ import * as FiIcons from 'react-icons/fi';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
+import SocialShare from './SocialShare';
 
-const { 
-  FiExternalLink, FiCopy, FiTrash2, FiToggleLeft, FiToggleRight, 
-  FiMousePointer, FiQrCode, FiDownload, FiLock 
+const {
+  FiExternalLink,
+  FiCopy,
+  FiTrash2,
+  FiToggleLeft,
+  FiToggleRight,
+  FiMousePointer,
+  FiQrCode,
+  FiDownload,
+  FiLock,
+  FiShare2
 } = FiIcons;
 
-const LinkList = ({ links, onDelete, onToggle }) => {
+const LinkList = ({ links, onDelete, onToggle, onUpdate }) => {
   const [qrCodeData, setQrCodeData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
-
+  const [shareUrl, setShareUrl] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentLink, setCurrentLink] = useState(null);
+  
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success('Link copied to clipboard!');
@@ -49,6 +61,12 @@ const LinkList = ({ links, onDelete, onToggle }) => {
       link.click();
     }
   };
+  
+  const handleShare = (link) => {
+    setCurrentLink(link);
+    setShareUrl(getShortUrl(link.shortCode));
+    setShowShareModal(true);
+  };
 
   if (links.length === 0) {
     return (
@@ -64,7 +82,6 @@ const LinkList = ({ links, onDelete, onToggle }) => {
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Your Links</h3>
         </div>
-        
         <div className="divide-y divide-gray-200">
           {links.map((link, index) => (
             <motion.div
@@ -80,22 +97,22 @@ const LinkList = ({ links, onDelete, onToggle }) => {
                     <h4 className="text-sm font-medium text-gray-900 truncate">
                       {getShortUrl(link.shortCode)}
                     </h4>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      link.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        link.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
                       {link.isActive ? 'Active' : 'Inactive'}
                     </span>
                     {link.hasPassword && (
-                      <SafeIcon icon={FiLock} className="h-4 w-4 text-gray-400" title="Password protected" />
+                      <SafeIcon
+                        icon={FiLock}
+                        className="h-4 w-4 text-gray-400"
+                        title="Password protected"
+                      />
                     )}
                   </div>
-                  
-                  <p className="text-sm text-gray-500 truncate mb-2">
-                    {link.originalUrl}
-                  </p>
-                  
+                  <p className="text-sm text-gray-500 truncate mb-2">{link.originalUrl}</p>
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
                       <SafeIcon icon={FiMousePointer} className="h-3 w-3" />
@@ -104,8 +121,14 @@ const LinkList = ({ links, onDelete, onToggle }) => {
                     <span>Created {format(new Date(link.createdAt), 'MMM d, yyyy')}</span>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={() => handleShare(link)}
+                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Share link"
+                  >
+                    <SafeIcon icon={FiShare2} className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => generateQRCode(getShortUrl(link.shortCode))}
                     className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -113,7 +136,6 @@ const LinkList = ({ links, onDelete, onToggle }) => {
                   >
                     <SafeIcon icon={FiQrCode} className="h-4 w-4" />
                   </button>
-                  
                   <button
                     onClick={() => copyToClipboard(getShortUrl(link.shortCode))}
                     className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -121,7 +143,6 @@ const LinkList = ({ links, onDelete, onToggle }) => {
                   >
                     <SafeIcon icon={FiCopy} className="h-4 w-4" />
                   </button>
-                  
                   <a
                     href={link.originalUrl}
                     target="_blank"
@@ -131,15 +152,16 @@ const LinkList = ({ links, onDelete, onToggle }) => {
                   >
                     <SafeIcon icon={FiExternalLink} className="h-4 w-4" />
                   </a>
-                  
                   <button
                     onClick={() => onToggle(link.id, !link.isActive)}
                     className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                     title={link.isActive ? 'Deactivate' : 'Activate'}
                   >
-                    <SafeIcon icon={link.isActive ? FiToggleRight : FiToggleLeft} className="h-4 w-4" />
+                    <SafeIcon
+                      icon={link.isActive ? FiToggleRight : FiToggleLeft}
+                      className="h-4 w-4"
+                    />
                   </button>
-                  
                   <button
                     onClick={() => onDelete(link.id)}
                     className="p-2 text-red-400 hover:text-red-600 transition-colors"
@@ -165,9 +187,9 @@ const LinkList = ({ links, onDelete, onToggle }) => {
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">QR Code</h3>
               {qrCodeData && (
-                <img 
-                  src={qrCodeData} 
-                  alt="QR Code" 
+                <img
+                  src={qrCodeData}
+                  alt="QR Code"
                   className="mx-auto mb-4 border border-gray-200 rounded"
                 />
               )}
@@ -189,6 +211,15 @@ const LinkList = ({ links, onDelete, onToggle }) => {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <SocialShare 
+          url={shareUrl} 
+          title={`Check out this link: ${currentLink?.originalUrl?.substring(0, 30)}...`}
+          onClose={() => setShowShareModal(false)} 
+        />
       )}
     </>
   );

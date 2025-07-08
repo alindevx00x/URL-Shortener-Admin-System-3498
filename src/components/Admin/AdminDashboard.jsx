@@ -6,10 +6,22 @@ import * as FiIcons from 'react-icons/fi';
 import ReactECharts from 'echarts-for-react';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
-const { 
-  FiUsers, FiLink, FiMousePointer, FiActivity, FiTrash2, FiTrendingUp, 
-  FiGlobe, FiSmartphone, FiMonitor, FiBarChart3 
+const {
+  FiUsers,
+  FiLink,
+  FiMousePointer,
+  FiActivity,
+  FiTrash2,
+  FiTrendingUp,
+  FiGlobe,
+  FiSmartphone,
+  FiMonitor,
+  FiBarChart3,
+  FiRefreshCw,
+  FiPlusCircle,
+  FiCalendar
 } = FiIcons;
 
 const AdminDashboard = () => {
@@ -17,27 +29,50 @@ const AdminDashboard = () => {
     totalLinks: 0,
     totalClicks: 0,
     totalUsers: 0,
+    urlsAddedToday: 0,
+    totalHits: 0,
     recentClicks: [],
     deviceStats: {},
     geoStats: {},
-    referrerStats: {}
+    referrerStats: {},
+    mostPopularUrls: [],
+    recentUrls: []
   });
   const [users, setUsers] = useState([]);
   const [links, setLinks] = useState([]);
   const [timeRange, setTimeRange] = useState('7d');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
+    
+    // Set up real-time updates
+    const interval = setInterval(() => {
+      loadData(true);
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, [timeRange]);
 
-  const loadData = () => {
-    const analyticsData = adminService.getAnalytics();
-    const usersData = adminService.getUsers();
-    const linksData = linkService.getLinks();
+  const loadData = (silent = false) => {
+    if (!silent) {
+      setRefreshing(true);
+    }
     
-    setStats(analyticsData);
-    setUsers(usersData);
-    setLinks(linksData);
+    setTimeout(() => {
+      const analyticsData = adminService.getAnalytics();
+      const usersData = adminService.getUsers();
+      const linksData = linkService.getLinks();
+      
+      setStats(analyticsData);
+      setUsers(usersData);
+      setLinks(linksData);
+      
+      if (!silent) {
+        setRefreshing(false);
+        toast.success('Dashboard data refreshed');
+      }
+    }, 800);
   };
 
   const handleDeleteUser = (userId) => {
@@ -60,17 +95,17 @@ const AdminDashboard = () => {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
     const dateRange = [];
     const clicksData = [];
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'MMM dd');
       dateRange.push(dateStr);
-      
+
       const dayClicks = stats.recentClicks.filter(click => {
         const clickDate = new Date(click.timestamp);
         return clickDate.toDateString() === date.toDateString();
       }).length;
-      
+
       clicksData.push(dayClicks);
     }
 
@@ -89,17 +124,19 @@ const AdminDashboard = () => {
       yAxis: {
         type: 'value'
       },
-      series: [{
-        data: clicksData,
-        type: 'line',
-        smooth: true,
-        itemStyle: {
-          color: '#3b82f6'
-        },
-        areaStyle: {
-          color: 'rgba(59, 130, 246, 0.1)'
+      series: [
+        {
+          data: clicksData,
+          type: 'line',
+          smooth: true,
+          itemStyle: {
+            color: '#3b82f6'
+          },
+          areaStyle: {
+            color: 'rgba(59,130,246,0.1)'
+          }
         }
-      }]
+      ]
     };
   };
 
@@ -120,18 +157,20 @@ const AdminDashboard = () => {
       legend: {
         bottom: '0%'
       },
-      series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        data: deviceData,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: deviceData,
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0,0,0,0.5)'
+            }
           }
         }
-      }]
+      ]
     };
   };
 
@@ -149,18 +188,20 @@ const AdminDashboard = () => {
       tooltip: {
         trigger: 'item'
       },
-      series: [{
-        type: 'pie',
-        radius: '70%',
-        data: geoData.slice(0, 10), // Top 10 countries
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+      series: [
+        {
+          type: 'pie',
+          radius: '70%',
+          data: geoData.slice(0, 10), // Top 10 countries
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0,0,0,0.5)'
+            }
           }
         }
-      }]
+      ]
     };
   };
 
@@ -190,6 +231,22 @@ const AdminDashboard = () => {
       change: '+23.1%'
     },
     {
+      title: 'Total Hits',
+      value: stats.totalHits || 0,
+      icon: FiBarChart3,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      change: '+18.4%'
+    },
+    {
+      title: 'URLs Added Today',
+      value: stats.urlsAddedToday || 0,
+      icon: FiPlusCircle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      change: '+5.7%'
+    },
+    {
       title: 'Recent Activity',
       value: stats.recentClicks.length,
       icon: FiActivity,
@@ -201,9 +258,31 @@ const AdminDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-gray-600">Manage users, links, and view detailed analytics</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-2 text-gray-600">Manage users, links, and view detailed analytics</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={() => loadData()} 
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center space-x-2"
+            disabled={refreshing}
+          >
+            <SafeIcon 
+              icon={FiRefreshCw} 
+              className={`h-5 w-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} 
+            />
+            <span className="text-sm text-gray-600">Refresh Data</span>
+          </button>
+          <Link 
+            to="/admin/users" 
+            className="px-4 py-2 bg-primary-600 text-white rounded flex items-center space-x-2"
+          >
+            <SafeIcon icon={FiUsers} className="h-4 w-4" />
+            <span>User Management</span>
+          </Link>
+        </div>
       </div>
 
       {/* Time Range Selector */}
@@ -226,27 +305,27 @@ const AdminDashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {statsCards.map((stat, index) => (
           <motion.div
             key={stat.title}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+            className="bg-white rounded-lg shadow-sm p-4 border border-gray-200"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                  <SafeIcon icon={stat.icon} className={`h-6 w-6 ${stat.color}`} />
+                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                  <SafeIcon icon={stat.icon} className={`h-5 w-5 ${stat.color}`} />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-xl font-bold text-gray-900">{stat.value}</p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-sm font-medium text-green-600">{stat.change}</span>
+                <span className="text-xs font-medium text-green-600">{stat.change}</span>
                 <p className="text-xs text-gray-500">vs last period</p>
               </div>
             </div>
@@ -304,12 +383,14 @@ const AdminDashboard = () => {
           </div>
           <div className="p-6">
             <div className="space-y-3">
-              {Object.entries(stats.referrerStats || {}).slice(0, 5).map(([referrer, count]) => (
-                <div key={referrer} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 truncate">{referrer}</span>
-                  <span className="text-sm font-medium text-gray-900">{count}</span>
-                </div>
-              ))}
+              {Object.entries(stats.referrerStats || {})
+                .slice(0, 5)
+                .map(([referrer, count]) => (
+                  <div key={referrer} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 truncate">{referrer}</span>
+                    <span className="text-sm font-medium text-gray-900">{count}</span>
+                  </div>
+                ))}
             </div>
           </div>
         </motion.div>
@@ -339,7 +420,7 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Performance Metrics */}
+        {/* Most Popular URLs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -349,49 +430,46 @@ const AdminDashboard = () => {
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <SafeIcon icon={FiTrendingUp} className="h-5 w-5 mr-2 text-primary-600" />
-              Performance
+              Most Popular URLs
             </h3>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Avg. clicks per link</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {stats.totalLinks > 0 ? (stats.totalClicks / stats.totalLinks).toFixed(1) : 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Active links</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {links.filter(link => link.isActive).length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Password protected</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {links.filter(link => link.hasPassword).length}
-                </span>
-              </div>
+            <div className="space-y-4 max-h-64 overflow-y-auto">
+              {(stats.mostPopularUrls || []).slice(0, 5).map((url, index) => (
+                <div key={index} className="flex items-center justify-between text-sm">
+                  <div className="flex-1 min-w-0 mr-2">
+                    <p className="font-medium text-gray-900 truncate">/{url.shortCode}</p>
+                    <p className="text-xs text-gray-500 truncate">{url.originalUrl}</p>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">{url.clicks} clicks</span>
+                </div>
+              ))}
             </div>
           </div>
         </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Users Management */}
+        {/* Users Management Preview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.0 }}
           className="bg-white rounded-lg shadow-sm border border-gray-200"
         >
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">Users</h3>
+            <Link to="/admin/users" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+              View All
+            </Link>
           </div>
           <div className="p-6">
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              {users.slice(0, 5).map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
                   <div>
                     <p className="font-medium text-gray-900">{user.name}</p>
                     <p className="text-sm text-gray-500">{user.email}</p>
@@ -414,24 +492,28 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Links Management */}
+        {/* Recently Added Links */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1 }}
           className="bg-white rounded-lg shadow-sm border border-gray-200"
         >
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Links</h3>
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-gray-900">Recently Added Links</h3>
+            <Link to="/admin/links" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+              View All
+            </Link>
           </div>
           <div className="p-6">
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {links.slice(0, 10).map((link) => (
-                <div key={link.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              {(stats.recentUrls || []).map((link) => (
+                <div
+                  key={link.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
-                      /{link.shortCode}
-                    </p>
+                    <p className="font-medium text-gray-900 truncate">/{link.shortCode}</p>
                     <p className="text-sm text-gray-500 truncate">{link.originalUrl}</p>
                     <p className="text-xs text-gray-400">
                       {link.clicks} clicks • {format(new Date(link.createdAt), 'MMM d, yyyy')}

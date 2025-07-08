@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { linkService } from '../../services/storage';
+import { linkService, notificationService } from '../../services/storage';
 import { motion } from 'framer-motion';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import LinkForm from './LinkForm';
 import LinkList from './LinkList';
+import SocialShare from './SocialShare';
 
-const { FiLink, FiMousePointer, FiClock, FiPlus } = FiIcons;
+const { FiLink, FiMousePointer, FiClock, FiPlus, FiRefreshCw } = FiIcons;
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,40 +20,80 @@ const Dashboard = () => {
     totalClicks: 0,
     recentLinks: 0
   });
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadLinks();
+    
+    // Set up real-time updates - polling every 30 seconds
+    const interval = setInterval(() => {
+      refreshData(true);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [user]);
 
   const loadLinks = () => {
-    const userLinks = linkService.getLinks(user.id);
-    setLinks(userLinks);
+    setLoading(true);
+    try {
+      const userLinks = linkService.getLinks(user.id);
+      setLinks(userLinks);
+      
+      const totalClicks = userLinks.reduce((sum, link) => sum + link.clicks, 0);
+      const recentLinks = userLinks.filter(link => {
+        const created = new Date(link.createdAt);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return created > weekAgo;
+      }).length;
+      
+      setStats({
+        totalLinks: userLinks.length,
+        totalClicks,
+        recentLinks
+      });
+    } catch (error) {
+      toast.error('Error loading links');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const totalClicks = userLinks.reduce((sum, link) => sum + link.clicks, 0);
-    const recentLinks = userLinks.filter(link => {
-      const created = new Date(link.createdAt);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return created > weekAgo;
-    }).length;
-
-    setStats({
-      totalLinks: userLinks.length,
-      totalClicks,
-      recentLinks
-    });
+  const refreshData = (silent = false) => {
+    if (!silent) {
+      setRefreshing(true);
+    }
+    
+    setTimeout(() => {
+      loadLinks();
+      if (!silent) {
+        setRefreshing(false);
+        toast.success('Data refreshed');
+      }
+    }, 600);
   };
 
   const handleCreateLink = (linkData) => {
     const result = linkService.createLink(
-      linkData.originalUrl, 
-      linkData.customCode, 
+      linkData.originalUrl,
+      linkData.customCode,
       user.id,
       linkData.hasPassword ? linkData.password : null
     );
     
     if (result.success) {
       toast.success('Link created successfully!');
+      
+      // Send notification
+      notificationService.sendNotification({
+        userId: user.id,
+        type: 'link_created',
+        title: 'New Link Created',
+        message: `Your link for ${linkData.originalUrl.substring(0, 30)}... has been created successfully.`,
+        linkId: result.link.id
+      });
+      
       loadLinks();
       setShowForm(false);
     } else {
@@ -98,9 +139,22 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome back, {user.name}!</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-2 text-gray-600">Welcome back, {user.name}!</p>
+        </div>
+        <button 
+          onClick={() => refreshData()} 
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center space-x-2"
+          disabled={refreshing}
+        >
+          <SafeIcon 
+            icon={FiRefreshCw} 
+            className={`h-5 w-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} 
+          />
+          <span className="text-sm text-gray-600">Refresh</span>
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -147,19 +201,19 @@ const Dashboard = () => {
           exit={{ opacity: 0, height: 0 }}
           className="mb-8"
         >
-          <LinkForm 
-            onSubmit={handleCreateLink} 
-            onCancel={() => setShowForm(false)} 
-          />
+          <LinkForm onSubmit={handleCreateLink} onCancel={() => setShowForm(false)} />
         </motion.div>
       )}
 
       {/* Links List */}
-      <LinkList 
-        links={links} 
-        onDelete={handleDeleteLink} 
-        onToggle={handleToggleLink} 
-      />
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your links...</p>
+        </div>
+      ) : (
+        <LinkList links={links} onDelete={handleDeleteLink} onToggle={handleToggleLink} />
+      )}
     </div>
   );
 };

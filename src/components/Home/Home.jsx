@@ -3,17 +3,44 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import { useAuth } from '../../contexts/AuthContext';
+import { linkService } from '../../services/storage';
+import toast from 'react-hot-toast';
 
-const { FiLink2, FiZap, FiBarChart3, FiShield, FiArrowRight, FiCheck, FiQrCode, FiLock, FiTrendingUp, FiUsers, FiGlobe, FiSmartphone } = FiIcons;
+const {
+  FiLink2,
+  FiZap,
+  FiBarChart3,
+  FiShield,
+  FiArrowRight,
+  FiCheck,
+  FiQrCode,
+  FiLock,
+  FiTrendingUp,
+  FiUsers,
+  FiGlobe,
+  FiSmartphone,
+  FiShare2
+} = FiIcons;
 
 const Home = () => {
+  const { user } = useAuth();
   const [demoUrl, setDemoUrl] = useState('');
   const [demoShortened, setDemoShortened] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleDemo = (e) => {
     e.preventDefault();
     if (demoUrl) {
-      setDemoShortened(`${window.location.origin}/abc123`);
+      setIsLoading(true);
+      setTimeout(() => {
+        const shortCode = Math.random().toString(36).substring(2, 8);
+        setDemoShortened(`${window.location.origin}/${shortCode}`);
+        setIsLoading(false);
+        toast.success('URL shortened successfully!');
+      }, 800);
+    } else {
+      toast.error('Please enter a URL to shorten');
     }
   };
 
@@ -44,9 +71,9 @@ const Home = () => {
       description: 'Secure your links with password protection for sensitive content. Enhanced security for your shortened URLs.'
     },
     {
-      icon: FiTrendingUp,
-      title: 'Real-time Link Tracking',
-      description: 'Monitor your link performance with real-time analytics and reporting. Perfect for social media campaigns and marketing.'
+      icon: FiShare2,
+      title: 'Social Sharing',
+      description: 'Share your shortened URLs directly to platforms like Facebook, Twitter, LinkedIn, and Tumblr with just one click.'
     }
   ];
 
@@ -165,10 +192,11 @@ const Home = () => {
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-70"
                 >
                   <SafeIcon icon={FiLink2} className="h-5 w-5" />
-                  <span>Shorten URL</span>
+                  <span>{isLoading ? 'Shortening...' : 'Shorten URL'}</span>
                 </button>
               </form>
               {demoShortened && (
@@ -189,19 +217,31 @@ const Home = () => {
               transition={{ delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link
-                to="/register"
-                className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <span>Start Shortening URLs Free</span>
-                <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
-              </Link>
-              <Link
-                to="/login"
-                className="bg-white text-primary-600 px-8 py-3 rounded-lg border border-primary-600 hover:bg-primary-50 transition-colors"
-              >
-                Sign In
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <span>Go to Dashboard</span>
+                  <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
+                </Link>
+              ) : (
+                <Link
+                  to="/register"
+                  className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <span>Start Shortening URLs Free</span>
+                  <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
+                </Link>
+              )}
+              {!user && (
+                <Link
+                  to="/login"
+                  className="bg-white text-primary-600 px-8 py-3 rounded-lg border border-primary-600 hover:bg-primary-50 transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
             </motion.div>
           </div>
         </div>
@@ -238,6 +278,7 @@ const Home = () => {
               The most powerful URL shortener for Spotify, Facebook, Amazon, and all your link management needs. Perfect for affiliate marketing and business campaigns.
             </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <motion.div
@@ -273,6 +314,7 @@ const Home = () => {
               Choose the perfect plan for your URL shortening needs. From personal use to enterprise solutions.
             </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {pricingPlans.map((plan, index) => (
               <motion.div
@@ -304,16 +346,29 @@ const Home = () => {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to="/register"
-                  className={`w-full py-3 px-4 rounded-lg font-medium transition-colors text-center block ${
-                    plan.popular
-                      ? 'bg-primary-600 text-white hover:bg-primary-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  Get Started
-                </Link>
+                {user ? (
+                  <Link
+                    to="/dashboard"
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition-colors text-center block ${
+                      plan.popular
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <Link
+                    to="/register"
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition-colors text-center block ${
+                      plan.popular
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    Get Started
+                  </Link>
+                )}
               </motion.div>
             ))}
           </div>
@@ -331,6 +386,7 @@ const Home = () => {
               Everything you need to know about our URL shortener service
             </p>
           </div>
+
           <div className="space-y-6">
             {faqs.map((faq, index) => (
               <motion.div
@@ -376,19 +432,31 @@ const Home = () => {
             transition={{ delay: 0.2 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link
-              to="/register"
-              className="bg-white text-primary-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center justify-center space-x-2"
-            >
-              <span>Create Your Account</span>
-              <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
-            </Link>
-            <Link
-              to="/login"
-              className="border-2 border-white text-white px-8 py-3 rounded-lg hover:bg-white hover:text-primary-600 transition-colors"
-            >
-              Sign In
-            </Link>
+            {user ? (
+              <Link
+                to="/dashboard"
+                className="bg-white text-primary-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center justify-center space-x-2"
+              >
+                <span>Go to Dashboard</span>
+                <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/register"
+                  className="bg-white text-primary-600 px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center justify-center space-x-2"
+                >
+                  <span>Create Your Account</span>
+                  <SafeIcon icon={FiArrowRight} className="h-5 w-5" />
+                </Link>
+                <Link
+                  to="/login"
+                  className="border-2 border-white text-white px-8 py-3 rounded-lg hover:bg-white hover:text-primary-600 transition-colors"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
           </motion.div>
         </div>
       </div>

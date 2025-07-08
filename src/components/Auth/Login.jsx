@@ -20,10 +20,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -32,7 +29,6 @@ const Login = () => {
 
     try {
       const result = authService.login(formData.email, formData.password);
-      
       if (result.success) {
         login(result.user);
         toast.success('Login successful!');

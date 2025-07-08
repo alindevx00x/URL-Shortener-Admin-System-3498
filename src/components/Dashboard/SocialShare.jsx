@@ -4,11 +4,11 @@ import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-const { FiShare2, FiTwitter, FiLinkedin, FiCopy, FiX } = FiIcons;
+const { FiShare2, FiTwitter, FiLinkedin, FiCopy, FiX, FiFacebook, FiInstagram, FiMail } = FiIcons;
 
-const SocialShare = ({ url, onClose }) => {
-  const [customMessage, setCustomMessage] = useState('');
-
+const SocialShare = ({ url, title = '', onClose }) => {
+  const [customMessage, setCustomMessage] = useState(title || '');
+  
   const socialPlatforms = [
     {
       name: 'Twitter',
@@ -42,12 +42,23 @@ const SocialShare = ({ url, onClose }) => {
         const caption = message || 'Check out this link!';
         return `https://www.tumblr.com/widgets/share/tool?posttype=link&title=${encodeURIComponent(caption)}&content=${encodeURIComponent(url)}&canonicalUrl=${encodeURIComponent(url)}`;
       }
+    },
+    {
+      name: 'Email',
+      icon: FiMail,
+      color: 'bg-gray-600 hover:bg-gray-700',
+      getUrl: (url, message) => {
+        const subject = 'Check out this link';
+        const body = `${message || 'I thought you might find this interesting:'}\n\n${url}`;
+        return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      }
     }
   ];
 
   const handleShare = (platform) => {
     const shareUrl = platform.getUrl(url, customMessage);
     window.open(shareUrl, '_blank', 'width=600,height=400');
+    toast.success(`Sharing on ${platform.name}`);
   };
 
   const copyToClipboard = () => {
